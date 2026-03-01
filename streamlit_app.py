@@ -33,23 +33,25 @@ def load_assets():
 model, feature_names, fuel_options = load_assets()
 
 
-# Prediction Function
 def make_prediction(input_data):
-
-    # Start the dataframe filled with 0s — model was trained on a fixed set of columns
     input_df = pd.DataFrame(0, index=[0], columns=feature_names)
 
-    # Fill in the values we have; any keys not found in the dataframe are ignored
     for key, value in input_data.items():
         if key in input_df.columns:
             input_df[key] = value
 
-    # The fuel type was one-hot encoded during training, so we set its column to 1
     selected_fuel_col = f"EVT_FUEL_N_{input_data['selected_fuel']}"
     if selected_fuel_col in input_df.columns:
         input_df[selected_fuel_col] = 1
 
-    # predict_proba returns [P(no fire), P(fire)] — we want index [1]
+    # Debug: show what the model expects vs what we're sending
+    model_features = model.feature_names_in_.tolist()
+    st.write("Model expects:", model_features)
+    st.write("We are sending:", feature_names.tolist())
+    st.write("Missing from input:", set(model_features) - set(feature_names.tolist()))
+    st.write("Extra in input:", set(feature_names.tolist()) - set(model_features))
+    st.stop()
+
     prob = model.predict_proba(input_df)[0][1]
     return prob
 
