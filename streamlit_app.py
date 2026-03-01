@@ -164,14 +164,6 @@ with st.sidebar:
         "Existing Vegetation Fuel Type", options=fuel_options, key=f"fuel_{v}"
     )
 
-    # ── Date (display only) ───────────────────────────────────────────────
-    st.subheader("Date")
-    selected_date = st.date_input(
-        "Prediction Date", value=datetime.date.today(), key=f"date_{v}"
-    )
-
-    st.markdown("---")
-
 # ── Buttons ───────────────────────────────────────────────────────────────
 col_btn1, col_btn2 = st.columns(2)
 
