@@ -44,14 +44,6 @@ def make_prediction(input_data):
     if selected_fuel_col in input_df.columns:
         input_df[selected_fuel_col] = 1
 
-    # Debug: show what the model expects vs what we're sending
-    model_features = model.feature_names_in_.tolist()
-    st.write("Model expects:", model_features)
-    st.write("We are sending:", feature_names.tolist())
-    st.write("Missing from input:", set(model_features) - set(feature_names.tolist()))
-    st.write("Extra in input:", set(feature_names.tolist()) - set(model_features))
-    st.stop()
-
     prob = model.predict_proba(input_df)[0][1]
     return prob
 
