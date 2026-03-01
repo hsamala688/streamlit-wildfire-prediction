@@ -171,14 +171,19 @@ with st.sidebar:
     friendly_fuel_map = {
         "Chaparral (Dense Shrubs)": "Sh Northern and Central California Dry-Mesic Chaparral",
         "Coastal Scrub": "Sh Southern California Coastal Scrub",
-        "Grassland": "He Great Basin & Intermountain Introduced Annual Grassland",
-        "Oak Woodland": "Tr California Lower Montane Blue Oak Forest and Woodland",
+        "Desert Scrub (Mojave / Sonora)": "Sh Sonora-Mojave Creosotebush-White Bursage Desert Scrub",
+        "Sagebrush / Great Basin Shrub": "Sh Inter-Mountain Basins Big Sagebrush Shrubland",
+        "Grassland": "He California Central Valley and Southern Coastal Grassland",
+        "Marsh / Wetland": "He Temperate Pacific Freshwater Emergent Marsh",
+        "Oak Woodland / Savanna": "Tr California Lower Montane Blue Oak Forest and Woodland",
         "Mixed Conifer Forest": "Tr Mediterranean California Mesic Mixed Conifer Forest and Woodland",
-        "Desert Scrub": "Sh Sonora-Mojave Creosotebush-White Bursage Desert Scrub",
-        "Alpine / Subalpine": "Sh Sierra Nevada Alpine Dwarf-Shrubland",
-        "Riparian / Wetland": "Tr California Central Valley Riparian Woodland and Shrubland",
+        "Subalpine / Alpine Forest": "Tr Mediterranean California Subalpine Woodland",
+        "Riparian / Streamside Forest": "Tr California Central Valley Riparian Woodland and Shrubland",
+        "Coastal Redwood / Closed-Cone": "Tr California Coastal Redwood Forest",
         "Agricultural / Cropland": "Da Row Crop",
         "Developed / Urban": "Bau Developed-Low Intensity",
+        "Sparse / Bare Vegetation": "Sps Mediterranean California Sparsely Vegetated Systems",
+        "Snow / Ice": "Ba Snow-Ice",
     }
 
     selected_friendly = st.selectbox(
