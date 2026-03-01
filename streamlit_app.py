@@ -60,6 +60,7 @@ def make_prediction(input_data):
     st.stop()
     return prob
 
+st.write(fuel_options)
 
 # ── Session Reset Feature ─────────────────────────────────────────────────────────────
 if "version" not in st.session_state:
