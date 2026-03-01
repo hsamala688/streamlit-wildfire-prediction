@@ -32,6 +32,8 @@ def load_assets():
 
 model, feature_names, fuel_options = load_assets()
 
+st.write(fuel_options)
+
 
 def make_prediction(input_data):
     input_df = pd.DataFrame(0, index=[0], columns=model.feature_names_in_)
