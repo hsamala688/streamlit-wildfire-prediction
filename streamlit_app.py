@@ -192,27 +192,12 @@ with st.sidebar:
         "Existing Vegetation Fuel Type", options=fuel_options, key=f"fuel_{v}"
     )
 
-    # ── Date ──────────────────────────────────────────────────────────────────
-    st.subheader("Date")
-    selected_date = st.date_input(
-        "Prediction Date", value=datetime.date.today(), key=f"date_{v}"
-    )
-    # month, day_of_year, year all derived from the single date picker
-    pred_month = selected_date.month
-    pred_day_of_year = selected_date.timetuple().tm_yday
-    pred_year = selected_date.year
-
-    st.markdown("---")
-
 col_btn1, col_btn2 = st.columns(2)
 
 # ── Input Directory ────────────────────────────────────────────────────────────
 input_dict = {
     "latitude": latitude,
     "longitude": longitude,
-    "month": pred_month,
-    "day_of_year": pred_day_of_year,
-    "year": pred_year,
     "wx_tavg_c": wx_tavg_c,
     "wx_prcp_mm": wx_prcp_mm,
     "wx_wspd_ms": wx_wspd_ms,
@@ -238,10 +223,6 @@ if predict_clicked:
 
 # ── Dataframe Setup ────────────────────────────────────────────────────
 data = {
-    "Pred Date": [selected_date.strftime("%B %d, %Y")],
-    "Month": [pred_month],
-    "Day of Year": [pred_day_of_year],
-    "Year": [pred_year],
     "Lat": [latitude],
     "Lon": [longitude],
     "Avg Daily Temp (°C)": [wx_tavg_c],
@@ -270,17 +251,17 @@ risk = st.session_state.get("risk", 0.0)
 # [0.29101556 0.62917867 0.83271943 0.87625205 0.901101   0.91034244]
 risk = st.session_state.get("risk", None)
 
-if risk is not None:
-    if risk < 0.291:
-        risk_label = "Very Low"
-    elif risk < 0.629:
-        risk_label = "Low"
-    elif risk < 0.833:
-        risk_label = "Moderate"
-    elif risk < 0.876:
-        risk_label = "High"
-    else:
-        risk_label = "Extreme"
+# Replace your old thresholds with these:
+if risk < 0.391:
+    risk_label = "Very Low"
+elif risk < 0.597:
+    risk_label = "Low"
+elif risk < 0.704:
+    risk_label = "Moderate"
+elif risk < 0.754:
+    risk_label = "High"
+else:
+    risk_label = "Extreme"
 
     st.metric("Wildfire Risk", f"{risk:.1%}", delta=risk_label, delta_color="off")
 
