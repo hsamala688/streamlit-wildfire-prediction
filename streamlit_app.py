@@ -34,7 +34,7 @@ model, feature_names, fuel_options = load_assets()
 
 
 def make_prediction(input_data):
-    input_df = pd.DataFrame(0, index=[0], columns=feature_names)
+    input_df = pd.DataFrame(0, index=[0], columns=model.feature_names_in_)
 
     for key, value in input_data.items():
         if key in input_df.columns:
@@ -44,7 +44,12 @@ def make_prediction(input_data):
     if selected_fuel_col in input_df.columns:
         input_df[selected_fuel_col] = 1
 
-    prob = model.predict_proba(input_df)[0][1]
+    try:
+        prob = model.predict_proba(input_df)[0][1]
+    except ValueError as e:
+        st.error(f"Full error: {e}")
+        st.stop()
+
     return prob
 
 
@@ -158,11 +163,28 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # ── Fuel Type ─────────────────────────────────────────────────────────
+    # ── Fuel Type ─────────────────────────────────────────────────────────────
     st.subheader("Fuel Type")
-    evt_fuel_n = st.selectbox(
-        "Existing Vegetation Fuel Type", options=fuel_options, key=f"fuel_{v}"
+
+    friendly_fuel_map = {
+        "Chaparral (Dense Shrubs)": "Sh Northern and Central California Dry-Mesic Chaparral",
+        "Coastal Scrub": "Sh Southern California Coastal Scrub",
+        "Grassland": "He Great Basin & Intermountain Introduced Annual Grassland",
+        "Oak Woodland": "Tr California Lower Montane Blue Oak Forest and Woodland",
+        "Mixed Conifer Forest": "Tr Mediterranean California Mesic Mixed Conifer Forest and Woodland",
+        "Desert Scrub": "Sh Sonora-Mojave Creosotebush-White Bursage Desert Scrub",
+        "Alpine / Subalpine": "Sh Sierra Nevada Alpine Dwarf-Shrubland",
+        "Riparian / Wetland": "Tr California Central Valley Riparian Woodland and Shrubland",
+        "Agricultural / Cropland": "Da Row Crop",
+        "Developed / Urban": "Bau Developed-Low Intensity",
+    }
+
+    selected_friendly = st.selectbox(
+        "Vegetation / Land Type",
+        options=list(friendly_fuel_map.keys()),
+        key=f"fuel_{v}",
     )
+    evt_fuel_n = friendly_fuel_map[selected_friendly]
 
     # ── Date (display only) ───────────────────────────────────────────────
     st.subheader("Date")
