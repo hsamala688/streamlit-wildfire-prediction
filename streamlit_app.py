@@ -251,17 +251,17 @@ risk = st.session_state.get("risk", 0.0)
 # [0.29101556 0.62917867 0.83271943 0.87625205 0.901101   0.91034244]
 risk = st.session_state.get("risk", None)
 
-# Replace your old thresholds with these:
-if risk < 0.391:
-    risk_label = "Very Low"
-elif risk < 0.597:
-    risk_label = "Low"
-elif risk < 0.704:
-    risk_label = "Moderate"
-elif risk < 0.754:
-    risk_label = "High"
-else:
-    risk_label = "Extreme"
+if risk is not None:
+    if risk < 0.391:
+        risk_label = "Very Low"
+    elif risk < 0.597:
+        risk_label = "Low"
+    elif risk < 0.704:
+        risk_label = "Moderate"
+    elif risk < 0.754:
+        risk_label = "High"
+    else:
+        risk_label = "Extreme"
 
     st.metric("Wildfire Risk", f"{risk:.1%}", delta=risk_label, delta_color="off")
 
