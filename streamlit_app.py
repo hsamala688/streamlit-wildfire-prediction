@@ -34,7 +34,7 @@ model, feature_names, fuel_options = load_assets()
 
 
 def make_prediction(input_data):
-    input_df = pd.DataFrame(0, index=[0], columns=feature_names)
+    input_df = pd.DataFrame(0, index=[0], columns=model.feature_names_in_)
 
     for key, value in input_data.items():
         if key in input_df.columns:
