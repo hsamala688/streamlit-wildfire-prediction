@@ -207,12 +207,9 @@ with st.sidebar:
     st.markdown("---")
 
 # ── Buttons ───────────────────────────────────────────────────────────────
-col_btn1, col_btn2 = st.columns(2)
+col_btn1 = st.columns(1)
 
 with col_btn1:
-    predict_clicked = st.button("Predict Wildfire Risk", type="primary")
-
-with col_btn2:
     if st.button("Clear Values"):
         reset_all()
 
