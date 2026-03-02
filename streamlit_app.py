@@ -6,6 +6,11 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+import folium
+from streamlit_folium import st_folium, folium_static
+import plotly.express as px
+from PIL import Image
+
 ## PAGE SETUP ─────────────────────────────────────────────────────────────
 st.set_page_config(page_title="California Wildfire Prediction", layout="wide")
 
