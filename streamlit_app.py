@@ -223,10 +223,6 @@ input_dict = {
     "selected_fuel": evt_fuel_n,
 }
 
-if predict_clicked:
-    with st.spinner("Running prediction..."):
-        st.session_state.risk = make_prediction(input_dict)
-
 # ── Display Table ─────────────────────────────────────────────────────────
 data = {
     "Pred Date": [selected_date.strftime("%B %d, %Y")],
