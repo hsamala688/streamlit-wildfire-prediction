@@ -253,8 +253,6 @@ df = df.rename(index={0: "Values:"})
 numeric_cols = df.select_dtypes(include="number").columns
 st.dataframe(df.style.format({c: "{:.2f}" for c in numeric_cols}))
 
-st.map(pd.DataFrame({"lat": [latitude], "lon": [longitude]}), zoom=5)
-
 # ── Map Setup ───────────────────────────────────────────────────────────────
 # st.map(pd.DataFrame({"lat": [latitude], "lon": [longitude]}), zoom=4)
 ca_lat = [32.5, 42.0]
