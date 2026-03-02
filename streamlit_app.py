@@ -250,6 +250,86 @@ st.dataframe(df.style.format({c: "{:.2f}" for c in numeric_cols}))
 
 st.map(pd.DataFrame({"lat": [latitude], "lon": [longitude]}), zoom=5)
 
+# ── Map Setup ───────────────────────────────────────────────────────────────
+# st.map(pd.DataFrame({"lat": [latitude], "lon": [longitude]}), zoom=4)
+ca_lat = [32.5, 42.0]
+ca_long = [-124.4, -114.1]
+
+map_col, risk_col = st.columns([0.7, 0.3])
+
+with map_col:
+    m = folium.Map(location=[np.average(ca_lat), np.average(ca_long)], 
+                    zoom_start=4.5, control_scale=True)      # use the mean latitude and longitude to center the map
+
+    # loop through each row in the dataframe & add to map using latitude & longitude
+    for i,row in df.iterrows():
+        # set up the content of the popup
+        iframe = folium.IFrame("Risk at (" + str(row["Lat"]) + ", " + str(row["Lon"]) + ") is " + str(int(make_prediction(input_dict)*100)) + "%.", width=300, height=25)
+
+        # initialize the popup using the iframe
+        popup = folium.Popup(iframe, max_width=500)
+
+        # add each row to the map with latitude & longitude
+        folium.Marker(location=[row['Lat'],row['Lon']],
+                    popup = popup).add_to(m)
+
+    st_data = folium_static(m)
+    fig = px.scatter_map(df, lat="Lat", lon="Lon", zoom=4.5)
+
+
+# ── Risk result ───────────────────────────────────────────────────────────────
+st.session_state.risk = make_prediction(input_dict)
+risk = st.session_state.get("risk", 0.0)
+
+arrow_angle = 0
+text_color = "green"
+
+if risk is not None:
+    if risk < 0.291:
+        risk_label = "Very Low"
+        arrow_angle = -18*1
+        text_color = "green"
+    elif risk < 0.629:
+        risk_label = "Low"
+        arrow_angle = -18*3
+        text_color = "blue"
+    elif risk < 0.833:
+        risk_label = "Moderate"
+        arrow_angle = -18*5
+        text_color = "yellow"
+    elif risk < 0.876:
+        risk_label = "High"
+        arrow_angle = -18*7
+        text_color = "orange"
+    else:
+        risk_label = "Extreme"
+        arrow_angle = -18*9
+        text_color = "red"
+
+    risk_col.header(f"Wildfire Risk:", text_alignment="center")
+    risk_col.subheader(f":{text_color}[{risk_label}]", text_alignment="center")
+
+bg = Image.open("wildfire_meter.png").convert("RGBA")
+arrow = Image.open("arrow.png").convert("RGBA")
+
+scale_factor = 0.20
+new_width = int(bg.width * scale_factor)
+aspect_ratio = arrow.height / arrow.width
+new_height = int(new_width * aspect_ratio)
+arrow_resized = arrow.resize((new_width, new_height), Image.LANCZOS)
+
+rotated_arrow = arrow_resized.rotate(
+    90+arrow_angle,
+    resample=Image.BICUBIC,
+    expand=True)
+
+combined = bg.copy()
+
+bg_w, bg_h = combined.size
+position = (bg_w // 4, bg_h // 2)
+combined.paste(rotated_arrow, position, rotated_arrow)
+risk_col.image(combined.convert("RGB"), width="stretch")
+
 # ── Risk Result ───────────────────────────────────────────────────────────
 risk = st.session_state.get("risk", None)
 
