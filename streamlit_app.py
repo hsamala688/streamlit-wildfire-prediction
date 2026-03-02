@@ -339,5 +339,3 @@ if risk is not None:
         risk_label = "High"
     else:
         risk_label = "Extreme"
-
-    st.metric("Wildfire Risk", f"{risk:.1%}", delta=risk_label, delta_color="off")
