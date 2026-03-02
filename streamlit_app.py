@@ -207,9 +207,8 @@ with st.sidebar:
     st.markdown("---")
 
 # ── Buttons ──────────────────────────────────────────────────────────────
-with col_btn1:
-    if st.button("Clear Values"):
-        reset_all()
+if st.button("Clear Values"):
+    reset_all()
 
 # ── Input Dictionary ──────────────────────────────────────────────────────
 input_dict = {
