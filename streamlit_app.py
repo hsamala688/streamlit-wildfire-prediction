@@ -206,9 +206,7 @@ with st.sidebar:
 
     st.markdown("---")
 
-# ── Buttons ───────────────────────────────────────────────────────────────
-col_btn1 = st.columns(1)
-
+# ── Buttons ──────────────────────────────────────────────────────────────
 with col_btn1:
     if st.button("Clear Values"):
         reset_all()
