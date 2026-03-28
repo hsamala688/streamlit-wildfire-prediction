@@ -1,4 +1,4 @@
-import datetime
+'''import datetime
 import os
 
 import joblib
@@ -339,3 +339,222 @@ if risk is not None:
         risk_label = "High"
     else:
         risk_label = "Extreme"
+'''
+import datetime
+import os
+
+import joblib
+import numpy as np
+import pandas as pd
+import streamlit as st
+import folium
+from streamlit_folium import folium_static
+import plotly.express as px
+from PIL import Image
+
+# ── Page Setup ────────────────────────────────────────────────────────────
+st.set_page_config(page_title="California Wildfire Prediction", layout="wide")
+
+# ── Risk Thresholds (single source of truth, from retrained model percentiles) ──
+RISK_LEVELS = [
+    (0.391, "Very Low",  "green",  1),
+    (0.597, "Low",       "blue",   3),
+    (0.704, "Moderate",  "yellow", 5),
+    (0.754, "High",      "orange", 7),
+    (1.001, "Extreme",   "red",    9),
+]
+ARROW_STEP = 18  # degrees per gauge segment
+
+def get_risk_level(prob: float) -> tuple[str, str, int]:
+    """Return (label, color, arrow_position) for a given probability."""
+    for threshold, label, color, position in RISK_LEVELS:
+        if prob < threshold:
+            return label, color, position
+    return "Extreme", "red", 9
+
+# ── Asset Loading ─────────────────────────────────────────────────────────
+@st.cache_resource
+def load_assets():
+    path = "model_assets"
+    model        = joblib.load(os.path.join(path, "wildfire_model.pkl"))
+    fuel_columns = joblib.load(os.path.join(path, "fuel_encoder.pkl"))
+    # feature_names.pkl is kept on disk for reproducibility but the model
+    # already exposes feature_names_in_, so we don't need to load it here.
+    fuel_options = [c.replace("EVT_FUEL_N_", "") for c in fuel_columns]
+    return model, fuel_options
+
+model, fuel_options = load_assets()
+
+# ── Prediction ────────────────────────────────────────────────────────────
+def make_prediction(
+    latitude, longitude, wx_tavg_c, wx_prcp_mm, wx_wspd_ms,
+    snow, lf_evc, lf_evh, evt_fuel_n
+) -> float:
+    """Build a model-ready DataFrame and return fire probability."""
+    df = pd.DataFrame(0, index=[0], columns=model.feature_names_in_)
+
+    scalar_inputs = dict(
+        latitude=latitude, longitude=longitude,
+        wx_tavg_c=wx_tavg_c, wx_prcp_mm=wx_prcp_mm,
+        wx_wspd_ms=wx_wspd_ms, snow=snow,
+        lf_evc=lf_evc, lf_evh=lf_evh,
+    )
+    for col, val in scalar_inputs.items():
+        if col in df.columns:
+            df[col] = val
+
+    fuel_col = f"EVT_FUEL_N_{evt_fuel_n}"
+    if fuel_col in df.columns:
+        df[fuel_col] = 1
+    else:
+        st.warning(f"Fuel type '{evt_fuel_n}' not found in model features.")
+
+    return float(model.predict_proba(df)[0][1])
+
+# ── Region Coordinates ────────────────────────────────────────────────────
+REGION_COORDS = {
+    "Northern CA (Redding / Shasta)":   (40.6, -122.4),
+    "Sierra Nevada Foothills":           (38.9, -120.7),
+    "Sacramento Valley":                 (38.5, -121.5),
+    "San Francisco Bay Area":            (37.7, -122.2),
+    "Central Valley":                    (36.7, -119.8),
+    "Central Coast":                     (35.3, -120.7),
+    "Los Angeles / SoCal Coast":         (34.1, -118.4),
+    "Inland Empire / San Bernardino":    (34.1, -117.3),
+    "San Diego":                         (32.8, -117.1),
+    "Mojave Desert":                     (34.9, -116.9),
+}
+
+FRIENDLY_FUEL_MAP = {
+    "Chaparral (Dense Shrubs)":         "Sh Northern and Central California Dry-Mesic Chaparral",
+    "Coastal Scrub":                    "Sh Southern California Coastal Scrub",
+    "Desert Scrub (Mojave / Sonora)":   "Sh Sonora-Mojave Creosotebush-White Bursage Desert Scrub",
+    "Sagebrush / Great Basin Shrub":    "Sh Inter-Mountain Basins Big Sagebrush Shrubland",
+    "Grassland":                        "He California Central Valley and Southern Coastal Grassland",
+    "Marsh / Wetland":                  "He Temperate Pacific Freshwater Emergent Marsh",
+    "Oak Woodland / Savanna":           "Tr California Lower Montane Blue Oak Forest and Woodland",
+    "Mixed Conifer Forest":             "Tr Mediterranean California Mesic Mixed Conifer Forest and Woodland",
+    "Subalpine / Alpine Forest":        "Tr Mediterranean California Subalpine Woodland",
+    "Riparian / Streamside Forest":     "Tr California Central Valley Riparian Woodland and Shrubland",
+    "Coastal Redwood / Closed-Cone":    "Tr California Coastal Redwood Forest",
+    "Agricultural / Cropland":          "Da Row Crop",
+    "Developed / Urban":                "Bau Developed-Low Intensity",
+    "Sparse / Bare Vegetation":         "Sps Mediterranean California Sparsely Vegetated Systems",
+    "Snow / Ice":                       "Ba Snow-Ice",
+}
+
+# ── Session State ─────────────────────────────────────────────────────────
+if "version" not in st.session_state:
+    st.session_state.version = 0
+
+def reset_all():
+    st.session_state.version += 1
+    st.rerun()
+
+v = st.session_state.version
+
+# ── Header ────────────────────────────────────────────────────────────────
+st.title("California Wildfire Prediction")
+
+url1 = "https://data.ca.gov/dataset/climate-land-cover-landfire-derived"
+url2 = "https://meteostat.net/en/"
+url3 = "https://firms.modaps.eosdis.nasa.gov/map/#d:24hrs;@0.0,0.0,3.0z"
+url4 = "https://github.com/hsamala688/CaliforniaWildfirePrediction"
+
+st.write("National Student Data Corp @ UCLA, Winter 2026 Project")
+st.write(f"Data from: [California Landfire]({url1}), [Meteostat]({url2}), [NASA FIRMS]({url3})")
+st.write(f"Predictions via a [Random Forest Classifier]({url4})")
+st.markdown("---")
+
+# ── Sidebar ───────────────────────────────────────────────────────────────
+with st.sidebar:
+    st.title("Adjust Risk Factors:")
+
+    selected_region = st.selectbox("Region", list(REGION_COORDS.keys()), key=f"region_{v}")
+    latitude, longitude = REGION_COORDS[selected_region]
+    st.caption(f"📍 Coordinates: ({latitude}, {longitude})")
+    st.markdown("---")
+
+    wx_tavg_c  = st.number_input("Avg Daily Temperature (°C)", min_value=0,   step=1,    format="%d",   key=f"temp_{v}")
+    wx_prcp_mm = st.number_input("Total Daily Precipitation (mm)", min_value=0.0, step=0.01, format="%.2f", key=f"prec_{v}")
+    wx_wspd_ms = st.number_input("Wind Speed (m/s)", min_value=0.0, step=0.01, format="%.2f", key=f"wind_{v}")
+    snow = st.selectbox("Snow Present?", [0, 1], format_func=lambda x: "Yes" if x else "No", key=f"snow_{v}")
+    st.markdown("---")
+
+    lf_evc = st.slider("Vegetation Cover (%)",   0, 100,  50,  key=f"cov_{v}")
+    lf_evh = st.slider("Vegetation Height (cm)", 0, 1000, 100, key=f"hei_{v}")
+    st.markdown("---")
+
+    st.subheader("Fuel Type")
+    selected_friendly = st.selectbox("Vegetation / Land Type", list(FRIENDLY_FUEL_MAP.keys()), key=f"fuel_{v}")
+    evt_fuel_n = FRIENDLY_FUEL_MAP[selected_friendly]
+    st.markdown("---")
+
+    st.subheader("Date")
+    selected_date = st.date_input("Prediction Date", value=datetime.date.today(), key=f"date_{v}")
+    if isinstance(selected_date, tuple):
+        selected_date = selected_date[0]
+    st.markdown("---")
+
+if st.button("Clear Values"):
+    reset_all()
+
+# ── Run prediction once ───────────────────────────────────────────────────
+risk = make_prediction(
+    latitude, longitude, wx_tavg_c, wx_prcp_mm,
+    wx_wspd_ms, snow, lf_evc, lf_evh, evt_fuel_n
+)
+risk_label, text_color, arrow_position = get_risk_level(risk)
+arrow_angle = -ARROW_STEP * arrow_position
+
+# ── Summary Table ─────────────────────────────────────────────────────────
+summary_df = pd.DataFrame([{
+    "Pred Date":        selected_date.strftime("%B %d, %Y"),
+    "Region":           selected_region,
+    "Lat":              latitude,
+    "Lon":              longitude,
+    "Avg Temp (°C)":    wx_tavg_c,
+    "Precip (mm)":      wx_prcp_mm,
+    "Wind (m/s)":       wx_wspd_ms,
+    "Snow":             "Yes" if snow else "No",
+    "Veg Cover (%)":    lf_evc,
+    "Veg Height (cm)":  lf_evh,
+    "Fuel Type":        evt_fuel_n,
+}])
+summary_df.index = ["Values:"]
+numeric_cols = summary_df.select_dtypes(include="number").columns
+st.dataframe(summary_df.style.format({c: "{:.2f}" for c in numeric_cols}))
+
+# ── Map + Risk Panel ──────────────────────────────────────────────────────
+map_col, risk_col = st.columns([0.7, 0.3])
+
+with map_col:
+    ca_center = [np.mean([32.5, 42.0]), np.mean([-124.4, -114.1])]
+    m = folium.Map(location=ca_center, zoom_start=4.5, control_scale=True)
+    popup_html = folium.IFrame(
+        f"Risk at ({latitude}, {longitude}): {int(risk * 100)}%",
+        width=300, height=25
+    )
+    folium.Marker(
+        location=[latitude, longitude],
+        popup=folium.Popup(popup_html, max_width=500)
+    ).add_to(m)
+    folium_static(m)
+
+with risk_col:
+    st.header("Wildfire Risk:")
+    st.subheader(f":{text_color}[{risk_label}]")
+    st.caption(f"Model probability: {risk:.1%}")
+
+    bg    = Image.open("wildfire_meter.png").convert("RGBA")
+    arrow = Image.open("arrow.png").convert("RGBA")
+
+    scale  = 0.20
+    new_w  = int(bg.width * scale)
+    new_h  = int(new_w * arrow.height / arrow.width)
+    arrow  = arrow.resize((new_w, new_h), Image.LANCZOS)
+    arrow  = arrow.rotate(90 + arrow_angle, resample=Image.BICUBIC, expand=True)
+
+    composite = bg.copy()
+    composite.paste(arrow, (bg.width // 4, bg.height // 2), arrow)
+    st.image(composite.convert("RGB"), width="stretch")
