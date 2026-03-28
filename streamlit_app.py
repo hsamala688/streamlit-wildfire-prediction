@@ -349,33 +349,29 @@ import pandas as pd
 import streamlit as st
 import folium
 from streamlit_folium import folium_static
-import plotly.express as px
 from PIL import Image
 
 # ── Page Setup ────────────────────────────────────────────────────────────
 st.set_page_config(page_title="California Wildfire Prediction", layout="wide")
 
 # ── Risk Thresholds (single source of truth, from retrained model percentiles) ──
-# Each of the 5 gauge segments occupies 36° of the 180° semicircle.
-# Positions measured from the LEFT end of the gauge arc:
+# Positions 1–5 map to gauge segments across the 180° semicircle.
+# Each segment spans 36°, so arrow_angle = -(position * 36 - 18) gives
+# centers at 18°, 54°, 90°, 126°, 162° from the left of the gauge arc.
 RISK_LEVELS = [
-    (0.391, "Very Low",  "green",   18),   # 1st segment center
-    (0.597, "Low",       "blue",    54),   # 2nd
-    (0.704, "Moderate",  "yellow",  90),   # center
-    (0.754, "High",      "orange", 126),   # 4th
-    (1.001, "Extreme",   "red",    162),   # 5th
+    (0.391, "Very Low",  "green",  1),
+    (0.597, "Low",       "blue",   2),
+    (0.704, "Moderate",  "yellow", 3),
+    (0.754, "High",      "orange", 4),
+    (1.001, "Extreme",   "red",    5),
 ]
 
-# Then when applying the rotation, map 0°→left-end, 180°→right-end:
-arrow_angle = 180 - arrow_position  # flip so left = low risk
-rotated_arrow = arrow.rotate(arrow_angle, resample=Image.BICUBIC, expand=True)
-
 def get_risk_level(prob: float) -> tuple[str, str, int]:
-    """Return (label, color, arrow_position) for a given probability."""
+    """Return (label, color, gauge_position) for a given probability."""
     for threshold, label, color, position in RISK_LEVELS:
         if prob < threshold:
             return label, color, position
-    return "Extreme", "red", 9
+    return "Extreme", "red", 5
 
 # ── Asset Loading ─────────────────────────────────────────────────────────
 @st.cache_resource
@@ -416,7 +412,7 @@ def make_prediction(
 
     return float(model.predict_proba(df)[0][1])
 
-# ── Region Coordinates ────────────────────────────────────────────────────
+# ── Constants ─────────────────────────────────────────────────────────────
 REGION_COORDS = {
     "Northern CA (Redding / Shasta)":   (40.6, -122.4),
     "Sierra Nevada Foothills":           (38.9, -120.7),
@@ -431,21 +427,21 @@ REGION_COORDS = {
 }
 
 FRIENDLY_FUEL_MAP = {
-    "Chaparral (Dense Shrubs)":         "Sh Northern and Central California Dry-Mesic Chaparral",
-    "Coastal Scrub":                    "Sh Southern California Coastal Scrub",
-    "Desert Scrub (Mojave / Sonora)":   "Sh Sonora-Mojave Creosotebush-White Bursage Desert Scrub",
-    "Sagebrush / Great Basin Shrub":    "Sh Inter-Mountain Basins Big Sagebrush Shrubland",
-    "Grassland":                        "He California Central Valley and Southern Coastal Grassland",
-    "Marsh / Wetland":                  "He Temperate Pacific Freshwater Emergent Marsh",
-    "Oak Woodland / Savanna":           "Tr California Lower Montane Blue Oak Forest and Woodland",
-    "Mixed Conifer Forest":             "Tr Mediterranean California Mesic Mixed Conifer Forest and Woodland",
-    "Subalpine / Alpine Forest":        "Tr Mediterranean California Subalpine Woodland",
-    "Riparian / Streamside Forest":     "Tr California Central Valley Riparian Woodland and Shrubland",
-    "Coastal Redwood / Closed-Cone":    "Tr California Coastal Redwood Forest",
-    "Agricultural / Cropland":          "Da Row Crop",
-    "Developed / Urban":                "Bau Developed-Low Intensity",
-    "Sparse / Bare Vegetation":         "Sps Mediterranean California Sparsely Vegetated Systems",
-    "Snow / Ice":                       "Ba Snow-Ice",
+    "Chaparral (Dense Shrubs)":        "Sh Northern and Central California Dry-Mesic Chaparral",
+    "Coastal Scrub":                   "Sh Southern California Coastal Scrub",
+    "Desert Scrub (Mojave / Sonora)":  "Sh Sonora-Mojave Creosotebush-White Bursage Desert Scrub",
+    "Sagebrush / Great Basin Shrub":   "Sh Inter-Mountain Basins Big Sagebrush Shrubland",
+    "Grassland":                       "He California Central Valley and Southern Coastal Grassland",
+    "Marsh / Wetland":                 "He Temperate Pacific Freshwater Emergent Marsh",
+    "Oak Woodland / Savanna":          "Tr California Lower Montane Blue Oak Forest and Woodland",
+    "Mixed Conifer Forest":            "Tr Mediterranean California Mesic Mixed Conifer Forest and Woodland",
+    "Subalpine / Alpine Forest":       "Tr Mediterranean California Subalpine Woodland",
+    "Riparian / Streamside Forest":    "Tr California Central Valley Riparian Woodland and Shrubland",
+    "Coastal Redwood / Closed-Cone":   "Tr California Coastal Redwood Forest",
+    "Agricultural / Cropland":         "Da Row Crop",
+    "Developed / Urban":               "Bau Developed-Low Intensity",
+    "Sparse / Bare Vegetation":        "Sps Mediterranean California Sparsely Vegetated Systems",
+    "Snow / Ice":                      "Ba Snow-Ice",
 }
 
 # ── Session State ─────────────────────────────────────────────────────────
@@ -461,14 +457,26 @@ v = st.session_state.version
 # ── Header ────────────────────────────────────────────────────────────────
 st.title("California Wildfire Prediction")
 
-url1 = "https://data.ca.gov/dataset/climate-land-cover-landfire-derived"
-url2 = "https://meteostat.net/en/"
-url3 = "https://firms.modaps.eosdis.nasa.gov/map/#d:24hrs;@0.0,0.0,3.0z"
-url4 = "https://github.com/hsamala688/CaliforniaWildfirePrediction"
+url1      = "https://data.ca.gov/dataset/climate-land-cover-landfire-derived"
+url2      = "https://meteostat.net/en/"
+url3      = "https://firms.modaps.eosdis.nasa.gov/map/#d:24hrs;@0.0,0.0,3.0z"
+url4      = "https://github.com/hsamala688/CaliforniaWildfirePrediction"
+emiliano  = "https://github.com/emilianotorneltaki"
+aliya     = "https://github.com/aliyatang"
+joseph    = "https://github.com/Potato12fff"
+will      = "https://github.com/wllamjp"
+arjun     = "https://github.com/ArjunBrahmandam"
+lipika    = "https://github.com/lipikagoel"
+hayden    = "https://github.com/hsamala688"
 
 st.write("National Student Data Corp @ UCLA, Winter 2026 Project")
 st.write(f"Data from: [California Landfire]({url1}), [Meteostat]({url2}), [NASA FIRMS]({url3})")
 st.write(f"Predictions via a [Random Forest Classifier]({url4})")
+st.write(
+    f"Data Engineering: [Emiliano]({emiliano}), [Arjun]({arjun}), [Will]({will}) | "
+    f"RCF: [Aliya]({aliya}), [Joseph]({joseph}) | "
+    f"Streamlit: [Lipika]({lipika}), [Hayden]({hayden})"
+)
 st.markdown("---")
 
 # ── Sidebar ───────────────────────────────────────────────────────────────
@@ -480,9 +488,9 @@ with st.sidebar:
     st.caption(f"📍 Coordinates: ({latitude}, {longitude})")
     st.markdown("---")
 
-    wx_tavg_c  = st.number_input("Avg Daily Temperature (°C)", min_value=0,   step=1,    format="%d",   key=f"temp_{v}")
+    wx_tavg_c  = st.number_input("Avg Daily Temperature (°C)",    min_value=0,   step=1,    format="%d",   key=f"temp_{v}")
     wx_prcp_mm = st.number_input("Total Daily Precipitation (mm)", min_value=0.0, step=0.01, format="%.2f", key=f"prec_{v}")
-    wx_wspd_ms = st.number_input("Wind Speed (m/s)", min_value=0.0, step=0.01, format="%.2f", key=f"wind_{v}")
+    wx_wspd_ms = st.number_input("Wind Speed (m/s)",               min_value=0.0, step=0.01, format="%.2f", key=f"wind_{v}")
     snow = st.selectbox("Snow Present?", [0, 1], format_func=lambda x: "Yes" if x else "No", key=f"snow_{v}")
     st.markdown("---")
 
@@ -504,27 +512,31 @@ with st.sidebar:
 if st.button("Clear Values"):
     reset_all()
 
-# ── Run prediction once ───────────────────────────────────────────────────
+# ── Run Prediction Once ───────────────────────────────────────────────────
 risk = make_prediction(
     latitude, longitude, wx_tavg_c, wx_prcp_mm,
     wx_wspd_ms, snow, lf_evc, lf_evh, evt_fuel_n
 )
-risk_label, text_color, arrow_position = get_risk_level(risk)
-arrow_angle = -ARROW_STEP * arrow_position
+risk_label, text_color, gauge_position = get_risk_level(risk)
+
+# Each of the 5 gauge segments spans 36° of the 180° semicircle.
+# Segment centers (from left): 18°, 54°, 90°, 126°, 162°.
+# Negate so the arrow rotates left-to-right with increasing risk.
+arrow_angle = -(gauge_position * 36 - 18)
 
 # ── Summary Table ─────────────────────────────────────────────────────────
 summary_df = pd.DataFrame([{
-    "Pred Date":        selected_date.strftime("%B %d, %Y"),
-    "Region":           selected_region,
-    "Lat":              latitude,
-    "Lon":              longitude,
-    "Avg Temp (°C)":    wx_tavg_c,
-    "Precip (mm)":      wx_prcp_mm,
-    "Wind (m/s)":       wx_wspd_ms,
-    "Snow":             "Yes" if snow else "No",
-    "Veg Cover (%)":    lf_evc,
-    "Veg Height (cm)":  lf_evh,
-    "Fuel Type":        evt_fuel_n,
+    "Pred Date":       selected_date.strftime("%B %d, %Y"),
+    "Region":          selected_region,
+    "Lat":             latitude,
+    "Lon":             longitude,
+    "Avg Temp (°C)":   wx_tavg_c,
+    "Precip (mm)":     wx_prcp_mm,
+    "Wind (m/s)":      wx_wspd_ms,
+    "Snow":            "Yes" if snow else "No",
+    "Veg Cover (%)":   lf_evc,
+    "Veg Height (cm)": lf_evh,
+    "Fuel Type":       evt_fuel_n,
 }])
 summary_df.index = ["Values:"]
 numeric_cols = summary_df.select_dtypes(include="number").columns
@@ -554,11 +566,11 @@ with risk_col:
     bg    = Image.open("wildfire_meter.png").convert("RGBA")
     arrow = Image.open("arrow.png").convert("RGBA")
 
-    scale  = 0.20
-    new_w  = int(bg.width * scale)
-    new_h  = int(new_w * arrow.height / arrow.width)
-    arrow  = arrow.resize((new_w, new_h), Image.LANCZOS)
-    arrow  = arrow.rotate(90 + arrow_angle, resample=Image.BICUBIC, expand=True)
+    scale = 0.20
+    new_w = int(bg.width * scale)
+    new_h = int(new_w * arrow.height / arrow.width)
+    arrow = arrow.resize((new_w, new_h), Image.LANCZOS)
+    arrow = arrow.rotate(90 + arrow_angle, resample=Image.BICUBIC, expand=True)
 
     composite = bg.copy()
     composite.paste(arrow, (bg.width // 4, bg.height // 2), arrow)
