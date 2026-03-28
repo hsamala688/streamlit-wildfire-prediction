@@ -521,8 +521,9 @@ risk_label, text_color, gauge_position = get_risk_level(risk)
 
 # Each of the 5 gauge segments spans 36° of the 180° semicircle.
 # Segment centers (from left): 18°, 54°, 90°, 126°, 162°.
-# Negate so the arrow rotates left-to-right with increasing risk.
-arrow_angle = -(gauge_position * 36 - 18)
+# 180 minus the center angle so PIL rotates the arrow left-to-right with risk.
+# Very Low=162°, Low=126°, Moderate=90°, High=54°, Extreme=18°
+arrow_angle = 180 - (gauge_position * 36 - 18)
 
 # ── Summary Table ─────────────────────────────────────────────────────────
 summary_df = pd.DataFrame([{
@@ -570,7 +571,7 @@ with risk_col:
     new_w = int(bg.width * scale)
     new_h = int(new_w * arrow.height / arrow.width)
     arrow = arrow.resize((new_w, new_h), Image.LANCZOS)
-    arrow = arrow.rotate(90 + arrow_angle, resample=Image.BICUBIC, expand=True)
+    arrow = arrow.rotate(arrow_angle, resample=Image.BICUBIC, expand=True)
 
     composite = bg.copy()
     composite.paste(arrow, (bg.width // 4, bg.height // 2), arrow)
