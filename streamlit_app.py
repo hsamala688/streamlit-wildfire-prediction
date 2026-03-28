@@ -356,14 +356,19 @@ from PIL import Image
 st.set_page_config(page_title="California Wildfire Prediction", layout="wide")
 
 # ── Risk Thresholds (single source of truth, from retrained model percentiles) ──
+# Each of the 5 gauge segments occupies 36° of the 180° semicircle.
+# Positions measured from the LEFT end of the gauge arc:
 RISK_LEVELS = [
-    (0.391, "Very Low",  "green",  1),
-    (0.597, "Low",       "blue",   3),
-    (0.704, "Moderate",  "yellow", 5),
-    (0.754, "High",      "orange", 7),
-    (1.001, "Extreme",   "red",    9),
+    (0.391, "Very Low",  "green",   18),   # 1st segment center
+    (0.597, "Low",       "blue",    54),   # 2nd
+    (0.704, "Moderate",  "yellow",  90),   # center
+    (0.754, "High",      "orange", 126),   # 4th
+    (1.001, "Extreme",   "red",    162),   # 5th
 ]
-ARROW_STEP = 18  # degrees per gauge segment
+
+# Then when applying the rotation, map 0°→left-end, 180°→right-end:
+arrow_angle = 180 - arrow_position  # flip so left = low risk
+rotated_arrow = arrow.rotate(arrow_angle, resample=Image.BICUBIC, expand=True)
 
 def get_risk_level(prob: float) -> tuple[str, str, int]:
     """Return (label, color, arrow_position) for a given probability."""
